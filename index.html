@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="voice.css" />
 </head>
 <body>
   <!-- Background Canvas -->
@@ -48,6 +49,12 @@
       </div>
 
       <div class="header-right">
+        <button id="speaker-toggle" class="header-icon-btn" onclick="toggleSpeaker()" title="Voice Output On" style="display:none">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+        </button>
         <div class="twin-badge" id="twin-badge" title="Decision Twin profile loaded">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
@@ -81,7 +88,17 @@
         <div class="mission-form">
           <div class="form-group">
             <label class="form-label" for="goal-input">Your Goal</label>
-            <textarea id="goal-input" class="form-textarea" placeholder="e.g. Buy a birthday gift for my sister who loves skincare and cooking..." rows="3"></textarea>
+            <div class="goal-input-wrap">
+              <textarea id="goal-input" class="form-textarea" placeholder="e.g. Buy a birthday gift for my sister who loves skincare and cooking..." rows="3"></textarea>
+              <button id="mic-btn" class="mic-btn" onclick="toggleVoiceInput()" title="Speak your goal" style="display:none">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                  <line x1="12" y1="19" x2="12" y2="23"></line>
+                  <line x1="8" y1="23" x2="16" y2="23"></line>
+                </svg>
+              </button>
+            </div>
           </div>
           <div class="form-row">
             <div class="form-group flex-1">

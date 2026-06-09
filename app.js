@@ -179,36 +179,16 @@ const CANDIDATE_DB = {
     { name: 'Amazon Basics Option A',       price: 0, rating: 4.3, deliveryDays: 2, reviews: 8000,  url: '#', description: 'Highly rated value option with fast Prime shipping.', features: ['Fast shipping', 'Well-reviewed'], badges: ['value','fast'] },
     { name: 'Top Rated Choice',             price: 0, rating: 4.8, deliveryDays: 3, reviews: 15000, url: '#', description: 'Top-rated product in this category with excellent reviews.', features: ['Top rated', 'Best reviews'], badges: ['top'] },
     { name: 'Premium Selection',            price: 0, rating: 4.7, deliveryDays: 2, reviews: 5000,  url: '#', description: 'Premium quality product with warranty and gift packaging.', features: ['Premium quality', 'Gift packaging', 'Warranty'], badges: ['premium','fast'] },
-    { name: 'Budget Value Pick',            price: 0, rating: 4.5, deliveryDays: 4, reviews: 20000, url: '#', description: 'Best value for money in this category.', features: ['Great value', 'High volume seller'], badges: ['value'] },
-  ],
+    { name: 'Budget Value Pick',            price: 0, rating: 4.5, deliveryDays: 4, reviews: 20000, url: '#', description: 'Best value for money in this category.', features: ['Great value', 'High volume seller'], badges: ['value'] }
+  ]
 };
 
 const PRESETS = {
-  matcha: {
-    goal: 'Buy my friend a matcha-themed gift under $60, delivered before Friday.',
-    budget: 60, urgency: 'urgent', constraints: 'eco-friendly, beautiful packaging',
-    wv: 7, ws: 8, wq: 6, db: 'matcha',
-  },
-  skincare: {
-    goal: 'Get a skincare bundle for my sister who loves clean beauty. Under $80.',
-    budget: 80, urgency: 'standard', constraints: 'cruelty-free, vegan, fragrance-free',
-    wv: 5, ws: 5, wq: 8, db: 'skincare',
-  },
-  coffee: {
-    goal: 'Set up a beginner home coffee brew station. Budget $120.',
-    budget: 120, urgency: 'flexible', constraints: 'beginner-friendly, compact',
-    wv: 6, ws: 4, wq: 8, db: 'coffee',
-  },
-  book: {
-    goal: 'Get a book and journal bundle for a writer friend. Under $45.',
-    budget: 45, urgency: 'standard', constraints: 'for writers, thoughtful gift',
-    wv: 8, ws: 6, wq: 7, db: 'book',
-  },
-  headphones: {
-    goal: 'Find the best wireless headphones for work from home under $200.',
-    budget: 200, urgency: 'flexible', constraints: 'noise cancelling, long battery',
-    wv: 6, ws: 4, wq: 9, db: 'headphones',
-  },
+  matcha:     { goal: 'Find a great matcha starter set for a beginner.', budget: 60, urgency: 'standard', constraints: 'eco-friendly, high quality', wv: 6, ws: 4, wq: 8 },
+  skincare:   { goal: 'I need a gentle hydrating skincare set for sensitive skin.', budget: 80, urgency: 'urgent', constraints: 'cruelty-free, fragrance-free', wv: 5, ws: 7, wq: 9 },
+  coffee:     { goal: 'Get a beginner pour-over coffee kit for my home office.', budget: 120, urgency: 'flexible', constraints: 'easy to use, compact', wv: 8, ws: 3, wq: 7 },
+  book:       { goal: 'Get a book and journal bundle for a writer friend. Under $45.', budget: 45, urgency: 'standard', constraints: 'for writers, thoughtful gift', wv: 8, ws: 6, wq: 7 },
+  headphones: { goal: 'Find the best wireless headphones for work from home under $200.', budget: 200, urgency: 'flexible', constraints: 'noise cancelling, long battery', wv: 6, ws: 4, wq: 9 },
 };
 
 // ══════════════════════════════════════════════
@@ -822,161 +802,91 @@ async function launchOtto() {
 
   const profile = DecisionTwin.updateFromSliders();
 
-  // ── Step 1: Understanding Goal ──
-  setActivity('Analyzing goal...');
-  addDivider('STEP 1 — UNDERSTANDING GOAL');
-  const t1 = addThinking('Parsing mission parameters...');
-  await delay(900);
-  removeEl(t1);
-  addStep(`<strong>Goal:</strong> ${goal}`);
-  await delay(300);
-  addStep(`<strong>Budget:</strong> $${budget} · <strong>Urgency:</strong> ${urgency} · <strong>Constraints:</strong> ${constraints || 'None'}`);
-  await delay(400);
+  setActivity('Sending mission to OTTO backend...');
+  addDivider('MISSION LAUNCHED');
+  const t = addThinking('Agents are evaluating the pipeline...');
 
-  // ── Step 2: Decision Twin ──
-  setActivity('Building Decision Twin...');
-  addDivider('STEP 2 — DECISION TWIN');
-  const t2 = addThinking('Analyzing your decision profile...');
-  await delay(1100);
-  removeEl(t2);
-
-  const twinInsight = DecisionTwin.getInsight(profile);
-  profile._forced = true;
-  DecisionTwin.render(profile);
-
-  addMsg('default', 'OTTO', 'otto',
-    `Decision Twin loaded. <br>
-    Budget Sensitivity: <span class="cv">${profile.budgetSensitivity}%</span> · 
-    Delivery Priority: <span class="cs">${profile.deliveryPriority}%</span> · 
-    Quality Focus: <span class="cv">${profile.qualityFocus}%</span><br>
-    <span style="color:var(--t3);font-size:11px;margin-top:4px;display:block">Insight: ${twinInsight}</span>`
-  );
-  await delay(500);
-
-  // ── Step 3: Research ──
-  setActivity('Searching candidates...');
-  addDivider('STEP 3 — RESEARCH');
-
-  const categories = ['matcha','skincare','coffee','book','headphones'];
-  let dbKey = 'generic';
-  for (const k of categories) {
-    if (goal.toLowerCase().includes(k) || (PRESETS[k] && goal === PRESETS[k].goal)) {
-      dbKey = k;
-      break;
+  try {
+    const res = await fetch('/api/pipeline/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        goal, budget, urgency, constraints, weights,
+        existingProfile: DecisionTwin.load()
+      })
+    });
+    
+    if (!res.ok) {
+      const errData = await res.json();
+      throw new Error(errData.error?.message || 'Pipeline failed');
     }
-  }
-  // Also check constraints for skincare keywords
-  if (constraints.toLowerCase().match(/skin|beauty|moistur|serum|cleanser/)) dbKey = 'skincare';
-  if (constraints.toLowerCase().match(/coffee|brew|espresso|pour/)) dbKey = 'coffee';
-  if (constraints.toLowerCase().match(/matcha|tea|green tea/)) dbKey = 'matcha';
-
-  const allRaw = [...(CANDIDATE_DB[dbKey] || CANDIDATE_DB.generic)];
-
-  // For generic, set prices relative to budget
-  if (dbKey === 'generic') {
-    allRaw[0].price = Math.round(budget * 0.65);
-    allRaw[1].price = Math.round(budget * 0.90);
-    allRaw[2].price = Math.round(budget * 0.80);
-    allRaw[3].price = Math.round(budget * 0.50);
-  }
-
-  const searchMessages = [
-    `Searching the web for <strong>${goal.substring(0, 50)}${goal.length > 50 ? '…' : ''}</strong>`,
-    `Found <strong class="cv">${allRaw.length} initial candidates</strong> across multiple sources`,
-    `Gathering pricing, review data, and delivery estimates...`,
-    `Cross-referencing with constraint requirements: <em>${constraints || 'none specified'}</em>`,
-  ];
-
-  for (const msg of searchMessages) {
-    const t = addThinking('');
-    const bubble = t.querySelector('.msg-bubble span');
-    bubble.innerHTML = msg;
-    await delay(700);
+    
+    const result = (await res.json()).data;
+    
     removeEl(t);
-    addStep(msg);
-    await delay(200);
-  }
+    
+    // Play back the reasoning chain
+    for (const step of result.reasoningChain) {
+      const ts = addThinking(`[${step.agent}] Working...`);
+      await delay(step.durationMs > 1000 ? 1000 : step.durationMs);
+      removeEl(ts);
+      
+      let providerHtml = '';
+      if (step.provider && step.model) {
+        providerHtml = `<div class="provider-badge">${step.provider} · ${step.model}</div>`;
+      }
+      
+      addStep(`<strong>${step.agent}</strong>: ${step.reasoning} <br>${providerHtml}`);
+      await delay(300);
+    }
+    
+    // Set UI state
+    state.candidates = result.ranked;
+    state.rejected = result.rejected;
+    state.winner = result.winner;
+    
+    DecisionTwin.render(result.decisionTwin.profile);
+    DecisionTwin.save(result.decisionTwin.profile);
+    renderRejectedSection(result.rejected);
+    renderOptionsCard(result.ranked.slice(0, 5));
+    renderDecisionBoard(result.ranked.slice(0, 5));
+    renderSavingsPanel(result.ranked, budget);
+    
+    const confidence = result.confidence;
+    const winner = result.winner;
+    
+    addDivider('TOP RECOMMENDATION');
+    addMsg('success', 'OTTO', 'success',
+      `<strong style="color:var(--emerald)">🏆 Recommendation: ${winner.name}</strong><br><br>
+      <strong>Why it won:</strong> ${winner.description}<br><br>
+      <strong>Final Score:</strong> <span class="cv">${winner.scores.finalScore}/100</span><br><br>
+      <strong>Narrative:</strong> ${result.finalReasoning}<br><br>
+      <strong>Confidence:</strong> <span class="cv">${confidence}%</span>`
+    );
+    
+    if(window.speakText) window.speakText(result.finalReasoning);
+    
+    await delay(400);
+    addDivider('HUMAN APPROVAL GATE');
+    renderApprovalInline(winner, state.currentTask);
+    
+    state.reportData = {
+      goal, budget, winner, candidates: result.ranked, rejected: result.rejected,
+      profile: result.decisionTwin.profile, timestamp: Date.now(),
+    };
 
-  // ── Step 4: Candidate Generation ──
-  setActivity('Evaluating candidates...');
-  addDivider('STEP 4 — CANDIDATE ANALYSIS');
-  const t4 = addThinking('Running constraint analysis...');
-  await delay(1000);
-  removeEl(t4);
-
-  const { passed, rejected } = filterAndScore(allRaw, budget, urgency, constraints, weights, profile);
-  state.candidates = passed;
-  state.rejected   = rejected;
-
-  renderRejectedSection(rejected);
-  await delay(400);
-
-  // ── Step 5: Scoring ──
-  setActivity('Computing decision scores...');
-  addDivider('STEP 5 — DECISION INTELLIGENCE ENGINE');
-  const scoringSteps = [
-    `Computing <strong>Preference Fit</strong> against Decision Twin profile...`,
-    `Computing <strong>Value Scores</strong> (budget efficiency)...`,
-    `Computing <strong>Delivery Scores</strong> (urgency: ${urgency})...`,
-    `Computing <strong>Quality Scores</strong> (review-weighted)...`,
-    `Computing <strong>Savings Scores</strong> (vs category average)...`,
-    `Ranking <strong>${passed.length} candidates</strong> by weighted final score...`,
-  ];
-
-  for (const msg of scoringSteps) {
-    const t = addThinking('');
-    t.querySelector('.msg-bubble span').innerHTML = msg;
-    await delay(500);
+    state.approvalPending = true;
+    setActivity('Awaiting approval...', true);
+    setStatus('thinking');
+    document.getElementById('launch-btn').disabled = false;
+    
+  } catch (err) {
     removeEl(t);
-    addStep(msg);
-    await delay(150);
+    addMsg('error', 'SYSTEM', 'error', `<strong>Pipeline Error:</strong> ${err.message}`);
+    setActivity('Mission failed', true);
+    setStatus('ready');
+    document.getElementById('launch-btn').disabled = false;
   }
-
-  // ── Step 6: Results ──
-  setActivity('Generating recommendation...');
-  addDivider('STEP 6 — RANKED OPTIONS');
-  await delay(400);
-
-  renderOptionsCard(passed.slice(0, 5));
-  renderDecisionBoard(passed.slice(0, 5));
-  renderSavingsPanel(passed, budget);
-
-  await delay(600);
-
-  // ── Step 7: Recommendation ──
-  const winner = passed[0];
-  state.winner = winner;
-  const confidence = Math.min(98, winner.scores.finalScore + 10);
-  const maxP = Math.max(...passed.map(c => c.price));
-  const savedVsMax = (maxP - winner.price).toFixed(2);
-  const avgP = passed.reduce((s, c) => s + c.price, 0) / passed.length;
-  const savedVsAvg = Math.max(0, avgP - winner.price).toFixed(2);
-
-  addDivider('STEP 7 — TOP RECOMMENDATION');
-  addMsg('success', 'OTTO', 'success',
-    `<strong style="color:var(--emerald)">🏆 Recommendation: ${winner.name}</strong><br><br>
-    <strong>Why it won:</strong> ${winner.description}<br><br>
-    <strong>Key advantages:</strong> ${(winner.features || []).slice(0, 3).join(' · ')}<br><br>
-    <strong>Estimated savings:</strong> <span class="ce">$${savedVsAvg} vs category average</span> · <span class="ce">$${savedVsMax} vs most expensive</span><br>
-    <strong>Confidence:</strong> <span class="cv">${confidence}%</span>`
-  );
-
-  await delay(400);
-
-  // ── Step 8: Approval Gate ──
-  addDivider('STEP 8 — HUMAN APPROVAL GATE');
-  renderApprovalInline(winner, state.currentTask);
-
-  // Prepare report data
-  state.reportData = {
-    goal, budget, winner, candidates: passed, rejected,
-    profile, timestamp: Date.now(),
-  };
-
-  state.approvalPending = true;
-  setActivity('Awaiting approval...', true);
-  setStatus('thinking');
-  document.getElementById('launch-btn').disabled = false;
 }
 
 // ══════════════════════════════════════════════
@@ -1199,9 +1109,20 @@ function newMission() {
 // SECTION 12 — SESSION LOG
 // ══════════════════════════════════════════════
 
-function saveSession(winner) {
+async function loadSessions() {
+  try {
+    const res = await fetch('/api/memory');
+    if (res.ok) {
+      state.sessionLog = await res.json();
+      renderSessionLog();
+    }
+  } catch(e) {
+    console.error('Failed to load memory', e);
+  }
+}
+
+async function saveSession(winner) {
   state.missionCount++;
-  localStorage.setItem('otto_mission_count', state.missionCount);
 
   const session = {
     goal:    state.currentTask.goal.substring(0, 50),
@@ -1210,10 +1131,16 @@ function saveSession(winner) {
     ts:      Date.now(),
   };
 
-  state.sessionLog.unshift(session);
-  if (state.sessionLog.length > 10) state.sessionLog = state.sessionLog.slice(0, 10);
-  localStorage.setItem('otto_sessions', JSON.stringify(state.sessionLog));
-  renderSessionLog();
+  try {
+    await fetch('/api/memory', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(session)
+    });
+    await loadSessions(); // refresh log
+  } catch(e) {
+    console.error('Failed to save memory', e);
+  }
 }
 
 function renderSessionLog() {
@@ -1303,7 +1230,7 @@ document.addEventListener('keydown', e => {
 
 (function init() {
   initSliders();
-  renderSessionLog();
+  loadSessions();
 
   // Render twin if stored
   const profile = DecisionTwin.load();
